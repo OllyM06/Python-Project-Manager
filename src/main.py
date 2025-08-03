@@ -1,4 +1,5 @@
 import os
+import json
 import tkinter as tkin
 from tkinter import messagebox
 from tkinter import filedialog
@@ -12,28 +13,88 @@ def upload_py():
     filepath = filedialog.askopenfilename(filetypes=[("Python Scripts", "*.py")])
     global pypath
     pypath = os.path.dirname(filepath)
-        
-    if filepath:
-        filename = filepath.split("/")[-1]
-        global pyfile
-        pyfile = tkin.Label(filesection, text=f"{filename}", bg="lightgrey", font=bold_font, cursor="hand2")
-        pyfile.pack(pady=5)
-        pyfile.bind("<Button-1>", lambda e: open_py_folder())
+
+    # Load existing paths if data.json exists
+    data = {"pypaths": []}
+    if os.path.exists("data.json"):
+        with open("data.json", "r") as f:
+            try:
+                data = json.load(f)
+            except Exception:
+                data = {"pypaths": []}
+
+    # Add new path if not already present
+    if pypath not in data["pypaths"]:
+        data["pypaths"].append(pypath)
+    with open("data.json", "w") as f:
+        json.dump(data, f)
+
+        if filepath:
+            filename = filepath.split("/")[-1]
+            global pyfile
+            pyfile = tkin.Label(filesection, text=f"{filename}", bg="lightgrey", font=bold_font, cursor="hand2")
+            pyfile.pack(pady=5)
+            pyfile.bind("<Button-1>", lambda e: open_py_folder())
+
+def load_py_files():
+    if os.path.exists("data.json"):
+        with open("data.json", "r") as f:
+            try:
+                data = json.load(f)
+                for path in data.get("pypaths", []):
+                    for file in os.listdir(path):
+                        if file.endswith(".py"):
+                            pyfile = tkin.Label(filesection, text=file, bg="lightgrey", font=bold_font, cursor="hand2")
+                            pyfile.pack(pady=5)
+                            pyfile.bind("<Button-1>", lambda e, p=path: os.startfile(p))
+            except Exception:
+                pass
 
 def upload_txt():
-    global filename
     filepath = filedialog.askopenfilename(filetypes=[("TXT Notes", "*.txt")])
-    global txt_file
-        
+    global txpath
+    txpath = filepath
+
+    # Load existing txt paths if data.json exists
+    data = {"txtpaths": []}
+    if os.path.exists("data.json"):
+        with open("data.json", "r") as f:
+            try:
+                data = json.load(f)
+            except Exception:
+                data = {"txtpaths": []}
+
+    # Add new txt path if not already present
+    if "txtpaths" not in data:
+        data["txtpaths"] = []
+    if txpath and txpath not in data["txtpaths"]:
+        data["txtpaths"].append(txpath)
+    with open("data.json", "w") as f:
+        json.dump(data, f)
+
     if filepath:
-        
-        filename = filepath.split("/")[-1]
-        global txpath
-        txpath = filepath
-        txt_file = filepath
+        filename = os.path.basename(filepath)
         txfile = tkin.Label(notesection, text=f"{filename}", bg="lightgrey", font=bold_font, cursor="hand2")
         txfile.pack(pady=5)
         txfile.bind("<Button-1>", lambda e: open_txt_folder())
+
+def load_txt_files():
+    if os.path.exists("data.json"):
+        with open("data.json", "r") as f:
+            try:
+                data = json.load(f)
+                for path in data.get("txtpaths", []):
+                    if os.path.exists(path) and path.endswith(".txt"):
+                        filename = os.path.basename(path)
+                        txfile = tkin.Label(notesection, text=filename, bg="lightgrey", font=bold_font, cursor="hand2")
+                        txfile.pack(pady=5)
+                        def open_txt(p=path):
+                            global txpath
+                            txpath = p
+                            open_txt_folder()
+                        txfile.bind("<Button-1>", lambda e, p=path: open_txt(p))
+            except Exception:
+                pass
 
 def open_txt_folder():
     # IDK why but tou need to define txt_file in both functions from the global variable 'txpath'.
@@ -71,17 +132,20 @@ filesection = tkin.Frame(main, bd=2, relief="sunken", padx=50, pady=10, bg="ligh
 filesection.pack(anchor="n", padx=10, pady=10, side="left")
 filesection_label = tkin.Label(filesection, text="Scripts:", bg="lightgrey")
 filesection_label.pack()
+load_py_files()
 
 notesection = tkin.Frame(main, bd=2, relief="sunken", padx=50, pady=10, bg="lightgrey")
 notesection.pack(anchor="n", padx=10, pady=10, side="right")
 notesection_label = tkin.Label(notesection, text="Notes:", bg="lightgrey")
 notesection_label.pack()
+load_txt_files()
 
 note_edit = tkin.Text(main, height=10, width=50, bg="lightgrey", font=("Arial", 8))
-note_edit.pack(anchor="s", pady=10, padx=10, fill="y", expand=True)
+note_edit.pack(anchor="s", pady=10, padx=10, fill="both", expand=True)
 
 
 
 main.config(menu=menubar)
 main.mainloop()
+
 
